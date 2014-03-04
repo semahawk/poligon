@@ -15,9 +15,10 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <errno.h>
+#include <math.h>
 
 #include <SDL.h>
-#include <SDL_gfxPrimitives.h>
+#include <sge.h>
 
 #include "poligon.h"
 
@@ -25,10 +26,19 @@
 const static unsigned WINDOW_HEIGHT = 400;
 const static unsigned WINDOW_WIDTH  = 647;
 
+/* static function forwards */
+static void *handle_so(struct unit_desc *desc, char *fname);
+static double side_len(unsigned sides);
+static unsigned circum_rad(unsigned sides);
+
 /* some useful macros */
 #define R(c) (((c) & 0xff0000) >> 16)
 #define G(c) (((c) & 0x00ff00) >> 8)
 #define B(c) (((c) & 0x0000ff))
+#define RGB(r,g,b) (((r) << 16) | ((g) << 8) | (b))
+
+#define RAD(deg) ((deg) * M_PI / 180.0)
+#define DEG(rad) ((rad) * 180.0 / M_PI)
 
 /* an array of functions to which the control would be given upon seeing one of
  * the listed file extensions */
@@ -45,8 +55,10 @@ int main(int argc, char *argv[])
   char *fname;
   /* here the file's extension will be stored */
   char fext[FEXT_MAX_SIZE + 1] = { 0 };
-  /* the, hm... control unit? */
-  struct ctl ctl = { 0 };
+  /* the user's unit */
+  struct unit unit = { 0 };
+  /* the unit's description (it's color, etc) */
+  struct unit_desc desc = { 0 };
 
   /* make sure there is at least one argument supplied */
   if (argc < 2){
@@ -106,7 +118,7 @@ int main(int argc, char *argv[])
 
     if (found){
       /* we know the extension, and can handle it */
-      if (p->handler(&ctl, fname) == NULL){
+      if (p->handler(&desc, fname) == NULL){
         fprintf(stderr, "%s: %s: %s\n", progname, fname, strerror(errno));
         return 1;
       }
@@ -117,17 +129,51 @@ int main(int argc, char *argv[])
     }
   }
 
-  /* TODO: safety checks for the `ctl' values */
+  /* TODO: safety checks for the `desc' values */
+  unit.desc = desc;
 
   /* initialize the SDL */
-  SDL_Init(SDL_INIT_VIDEO);
+  SDL_Init(SDL_INIT_EVERYTHING);
   /* set the title */
-  SDL_WM_SetCaption("Sidecross", NULL);
+  SDL_WM_SetCaption("Poligon", NULL);
   /* create the window */
   SDL_Surface *screen = SDL_SetVideoMode(WINDOW_WIDTH, WINDOW_HEIGHT, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
 
   SDL_Event event;
   int running = 1;
+
+  {
+    sge_Randomize();
+
+    Sint16 xs[UNIT_MAX_SIDES];
+    Sint16 ys[UNIT_MAX_SIDES];
+    int i;
+    unsigned cr, ca, xmov, ymov;
+    unsigned rot = 0 /* unit.rot */;
+
+    /* generate random coords */
+    unit.x = screen->w / 2;
+    unit.y = screen->h / 2;
+
+    for (i = 0; i < unit.desc.sides; i++){
+      /* calculate the circum radius */
+      cr = circum_rad(unit.desc.sides);
+      /* calculate the central angle */
+      ca = floor(360 / unit.desc.sides);
+      /* calculate the alpha angle */
+      xmov = cr * sin(RAD(rot));
+      ymov = cr * cos(RAD(rot));
+
+      xs[i] = unit.x - xmov;
+      ys[i] = unit.y + ymov;
+
+      printf("#%u (%u, %u)\n", i, unit.x - xmov, unit.y + ymov);
+
+      rot += ca;
+    }
+
+    sge_AAFilledPolygon(screen, unit.desc.sides, xs, ys, unit.desc.color);
+  }
 
   while (running){
     if (SDL_PollEvent(&event)){
@@ -137,9 +183,6 @@ int main(int argc, char *argv[])
           break;
       }
     }
-
-    trigonRGBA(screen, 500, 50, 550, 200, 600, 150,
-        R(ctl.colour), G(ctl.colour), B(ctl.colour), 255);
 
     /* update the screen */
     SDL_UpdateRect(screen, 0, 0, 0, 0);
@@ -151,10 +194,68 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-void *handle_so(struct ctl *ctl, char *fname)
+/*
+ * Calculates the circum radius for the <sides>ed polygon
+ */
+static unsigned circum_rad(unsigned sides)
+{
+  unsigned a = side_len(sides);
+
+  switch (sides){
+    case 3:
+      return floor(a * sqrt(3) / 3);
+    case 4:
+      return floor(a * sqrt(2) / 2);
+    case 5:
+      return floor((2 * a) / sqrt(2 * (5 - sqrt(5))));
+    case 6:
+      return a;
+    case 7:
+      return floor(a * 1.15238);
+    case 10:
+      return floor((a * (1 + sqrt(5))) / 2);
+    case 12:
+      return floor(((a * sqrt(2)) * (sqrt(3) + 1)) / 2);
+    default:
+      return 0;
+  }
+}
+
+/*
+ * Given the number of sides, this function calculates length of one side.
+ */
+static double side_len(unsigned sides)
+{
+  switch (sides){
+    case 3:
+      return floor(2 * UNIT_HEIGHT / sqrt(3));
+    case 4:
+      return UNIT_HEIGHT;
+    case 5:
+      return floor(UNIT_HEIGHT / 1.53884);
+    case 6:
+      return floor(UNIT_HEIGHT / sqrt(3));
+    case 7:
+      return floor(UNIT_HEIGHT / 2.19064);
+    case 8:
+      return floor(UNIT_HEIGHT / 2.41421);
+    case 9:
+      return floor(UNIT_HEIGHT / 2.83564);
+    case 10:
+      return floor(UNIT_HEIGHT / 3.07768);
+    case 11:
+      return floor(UNIT_HEIGHT / 3.47758);
+    case 12:
+      return floor(UNIT_HEIGHT / (2 + sqrt(3)));
+    default:
+      return 0;
+  }
+}
+
+static void *handle_so(struct unit_desc *desc, char *fname)
 {
   void *lib, *p;
-  struct ctl (*init)(void);
+  struct unit_desc (*init)(void);
 
   if ((lib = dlopen(fname, RTLD_LAZY)) == NULL){
     return NULL;
@@ -163,19 +264,16 @@ void *handle_so(struct ctl *ctl, char *fname)
   dlerror(); /* clear any existing error */
 
   if ((p = dlsym(lib, "init")) != NULL){
-    struct ctl ret;
-    init = (struct ctl (*)(void))p;
-    ret = init(); /* hooray `p' is reusable */
+    struct unit_desc ret;
+    init = (struct unit_desc (*)(void))p;
+    ret = init();
 
     if (p){
-      *ctl = ret;
+      *desc = ret;
     }
   }
 
   /* TODO: fetch the functions */
-
-  printf("sides: %u\n", ctl->sides);
-  printf("colour: 0x%06x\n", ctl->colour);
 
   return lib;
 }

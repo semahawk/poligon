@@ -1,6 +1,6 @@
 /*
  *
- * triton.c
+ * meh.c
  *
  * Created at:  Mon  3 Mar 22:02:05 2014 22:02:05
  *
@@ -12,14 +12,14 @@
 
 #include "poligon.h"
 
-struct ctl init(void)
+struct unit_desc init(void)
 {
-  struct ctl ret;
+  struct unit_desc desc;
 
-  ret.sides = 3;
-  ret.colour = 0xf27a02;
+  desc.sides = 7;
+  desc.color = 0x336699;
 
-  return ret;
+  return desc;
 }
 
 /*

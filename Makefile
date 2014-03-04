@@ -1,14 +1,14 @@
 CC=clang
 
-all: poligon triton
+all: poligon meh
 
-poligon: poligon.c
-	$(CC) -Wall -Werror `sdl-config --cflags --libs` -lSDL_gfx $< -o $@
+poligon: poligon.c poligon.h
+	$(CC) -Wall `sdl-config --cflags --libs` -lSGE $< -o $@
 
-triton: triton.so
-triton.so: triton.c
-	$(CC) -Wall -Werror -fPIC -c triton.c
-	$(CC) -shared triton.o -o triton.so
+meh: meh.so
+meh.so: meh.c poligon.h
+	$(CC) -Wall `sdl-config --cflags` -fPIC -c meh.c
+	$(CC) -shared meh.o -o meh.so
 
 clean:
 	rm -rf *.so

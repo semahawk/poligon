@@ -10,26 +10,39 @@
  *
  */
 
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef POLIGON_H
+#define POLIGON_H
+
+#include <SDL.h>
+#include <sge.h>
 
 /* the maximum size of the file's extension */
 #define FEXT_MAX_SIZE (4)
+/* the maximum number of one unit's sides */
+#define UNIT_MAX_SIDES (12)
+/* the minimum number of one unit's sides */
+#define UNIT_MIN_SIDES (3)
+/* the unit's height */
+#define UNIT_HEIGHT (84)
 
-struct ctl {
+struct unit_desc {
   unsigned sides;
-  unsigned colour;
+  Uint32 color;
+};
+
+struct unit {
+  unsigned x;
+  unsigned y;
+  unsigned rot; /* rotation (in degrees) */
+  struct unit_desc desc; /* unit's description */
 };
 
 struct file_handlers {
   char *fext;
-  void *(*handler)(struct ctl *ctl, char *fname);
+  void *(*handler)(struct unit_desc *desc, char *fname);
 };
 
-/* file handling function prototypes */
-void *handle_so(struct ctl *ctl, char *fname);
-
-#endif /* MAIN_H */
+#endif /* POLIGON_H */
 
 /*
  * vi: ft=c:ts=2:sw=2:expandtab
