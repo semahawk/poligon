@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
   }
 
   /* set the defaults */
-  unit.hp = UNIT_MAX_HP / 2;
+  unit.hp = 0;
   /* TODO: safety checks for the `desc' values */
   unit.desc = desc;
 
@@ -164,6 +164,7 @@ int main(int argc, char *argv[])
     }
 
     draw_unit(screen, &unit);
+    unit.hp++;
     unit.rot--;
 
     /* update the screen */
@@ -205,12 +206,7 @@ static void draw_unit(SDL_Surface *screen, struct unit *unit)
   /* draw the unit */
   sge_AAFilledPolygon(screen, unit->desc.sides, xs, ys, unit->desc.color);
 
-  unsigned loss;
-
-  if (unit->hp > 0)
-    loss = UNIT_HEIGHT - (UNIT_HEIGHT * unit->hp / UNIT_MAX_HP);
-  else
-    loss = UNIT_HEIGHT;
+  unsigned loss = UNIT_HEIGHT - (UNIT_HEIGHT * unit->hp / UNIT_MAX_HP);
 
   /* draw the health bar's background */
   /* the top left corner */
@@ -229,20 +225,26 @@ static void draw_unit(SDL_Surface *screen, struct unit *unit)
   sge_AAFilledPolygon(screen, 4, xs, ys, 0x1c1c1c);
 
   /* draw the health bar */
-  /* the top left corner */
-  xs[0] = unit->x - (UNIT_HEIGHT / 2);
-  ys[0] = unit->y + (UNIT_HEIGHT / 2) + 16;
-  /* the top right corner */
-  xs[1] = unit->x + (UNIT_HEIGHT / 2) - loss;
-  ys[1] = unit->y + (UNIT_HEIGHT / 2) + 16;
-  /* the bottom right corner */
-  xs[2] = unit->x + (UNIT_HEIGHT / 2) - loss;
-  ys[2] = unit->y + (UNIT_HEIGHT / 2) + 22;
-  /* the bottom left corner */
-  xs[3] = unit->x - (UNIT_HEIGHT / 2);
-  ys[3] = unit->y + (UNIT_HEIGHT / 2) + 22;
-  /* draw it */
-  sge_AAFilledPolygon(screen, 4, xs, ys, 0xef2929);
+  if (unit->hp > 0){
+    /* just to make sure */
+    if (unit->hp >= UNIT_MAX_HP)
+      loss = 0;
+
+    /* the top left corner */
+    xs[0] = unit->x - (UNIT_HEIGHT / 2);
+    ys[0] = unit->y + (UNIT_HEIGHT / 2) + 16;
+    /* the top right corner */
+    xs[1] = unit->x + (UNIT_HEIGHT / 2) - loss;
+    ys[1] = unit->y + (UNIT_HEIGHT / 2) + 16;
+    /* the bottom right corner */
+    xs[2] = unit->x + (UNIT_HEIGHT / 2) - loss;
+    ys[2] = unit->y + (UNIT_HEIGHT / 2) + 22;
+    /* the bottom left corner */
+    xs[3] = unit->x - (UNIT_HEIGHT / 2);
+    ys[3] = unit->y + (UNIT_HEIGHT / 2) + 22;
+    /* draw it */
+    sge_AAFilledPolygon(screen, 4, xs, ys, 0xef2929);
+  }
 }
 
 /*

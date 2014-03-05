@@ -37,7 +37,7 @@ struct unit {
   unsigned y;
   unsigned rot; /* rotation (in degrees) */
   struct unit_desc desc; /* unit's description */
-  unsigned hp; /* hit points */
+  int hp; /* hit points */
 };
 
 struct file_handlers {
