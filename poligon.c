@@ -26,6 +26,7 @@
 const static unsigned WINDOW_HEIGHT = 400;
 const static unsigned WINDOW_WIDTH  = 647;
 
+/* the binary's name */
 static char *progname;
 
 /* static function forwards */
@@ -131,6 +132,8 @@ int main(int argc, char *argv[])
     }
   }
 
+  /* set the defaults */
+  unit.hp = UNIT_MAX_HP / 2;
   /* TODO: safety checks for the `desc' values */
   unit.desc = desc;
 
@@ -160,6 +163,7 @@ int main(int argc, char *argv[])
     }
 
     draw_unit(screen, &unit);
+    unit.rot--;
 
     /* update the screen */
     SDL_UpdateRect(screen, 0, 0, 0, 0);
@@ -197,7 +201,47 @@ static void draw_unit(SDL_Surface *screen, struct unit *unit)
     rot += ca;
   }
 
+  /* draw the unit */
   sge_AAFilledPolygon(screen, unit->desc.sides, xs, ys, unit->desc.color);
+
+  unsigned loss;
+
+  if (unit->hp > 0)
+    loss = UNIT_HEIGHT - (UNIT_HEIGHT * unit->hp / UNIT_MAX_HP);
+  else
+    loss = UNIT_HEIGHT;
+
+  /* draw the health bar's background */
+  /* the top left corner */
+  xs[0] = unit->x - (UNIT_HEIGHT / 2) - 2;
+  ys[0] = unit->y + (UNIT_HEIGHT / 2) + 14;
+  /* the top right corner */
+  xs[1] = unit->x + (UNIT_HEIGHT / 2) + 2;
+  ys[1] = unit->y + (UNIT_HEIGHT / 2) + 14;
+  /* the bottom right corner */
+  xs[2] = unit->x + (UNIT_HEIGHT / 2) + 2;
+  ys[2] = unit->y + (UNIT_HEIGHT / 2) + 24;
+  /* the bottom left corner */
+  xs[3] = unit->x - (UNIT_HEIGHT / 2) - 2;
+  ys[3] = unit->y + (UNIT_HEIGHT / 2) + 24;
+  /* draw it */
+  sge_AAFilledPolygon(screen, 4, xs, ys, 0x1c1c1c);
+
+  /* draw the health bar */
+  /* the top left corner */
+  xs[0] = unit->x - (UNIT_HEIGHT / 2);
+  ys[0] = unit->y + (UNIT_HEIGHT / 2) + 16;
+  /* the top right corner */
+  xs[1] = unit->x + (UNIT_HEIGHT / 2) - loss;
+  ys[1] = unit->y + (UNIT_HEIGHT / 2) + 16;
+  /* the bottom right corner */
+  xs[2] = unit->x + (UNIT_HEIGHT / 2) - loss;
+  ys[2] = unit->y + (UNIT_HEIGHT / 2) + 22;
+  /* the bottom left corner */
+  xs[3] = unit->x - (UNIT_HEIGHT / 2);
+  ys[3] = unit->y + (UNIT_HEIGHT / 2) + 22;
+  /* draw it */
+  sge_AAFilledPolygon(screen, 4, xs, ys, 0xef2929);
 }
 
 /*

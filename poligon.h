@@ -18,6 +18,8 @@
 
 /* the maximum size of the file's extension */
 #define FEXT_MAX_SIZE (4)
+/* maximum health */
+#define UNIT_MAX_HP (256)
 /* the maximum number of one unit's sides */
 #define UNIT_MAX_SIDES (12)
 /* the minimum number of one unit's sides */
@@ -35,6 +37,7 @@ struct unit {
   unsigned y;
   unsigned rot; /* rotation (in degrees) */
   struct unit_desc desc; /* unit's description */
+  unsigned hp; /* hit points */
 };
 
 struct file_handlers {
