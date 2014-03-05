@@ -30,6 +30,7 @@ const static unsigned WINDOW_WIDTH  = 647;
 static void *handle_so(struct unit_desc *desc, char *fname);
 static double side_len(unsigned sides);
 static unsigned circum_rad(unsigned sides);
+static void draw_unit(SDL_Surface *screen, struct unit *unit);
 
 /* some useful macros */
 #define R(c) (((c) & 0xff0000) >> 16)
@@ -142,40 +143,13 @@ int main(int argc, char *argv[])
   SDL_Event event;
   int running = 1;
 
-  {
-    sge_Randomize();
+  sge_Randomize();
 
-    Sint16 xs[UNIT_MAX_SIDES];
-    Sint16 ys[UNIT_MAX_SIDES];
-    int i;
-    unsigned cr, ca, xmov, ymov;
-    unsigned rot = 0 /* unit.rot */;
-
-    /* generate random coords */
-    unit.x = screen->w / 2;
-    unit.y = screen->h / 2;
-
-    for (i = 0; i < unit.desc.sides; i++){
-      /* calculate the circum radius */
-      cr = circum_rad(unit.desc.sides);
-      /* calculate the central angle */
-      ca = floor(360 / unit.desc.sides);
-      /* calculate the alpha angle */
-      xmov = cr * sin(RAD(rot));
-      ymov = cr * cos(RAD(rot));
-
-      xs[i] = unit.x - xmov;
-      ys[i] = unit.y + ymov;
-
-      printf("#%u (%u, %u)\n", i, unit.x - xmov, unit.y + ymov);
-
-      rot += ca;
-    }
-
-    sge_AAFilledPolygon(screen, unit.desc.sides, xs, ys, unit.desc.color);
-  }
+  unit.x = screen->w / 2;
+  unit.y = screen->h / 2;
 
   while (running){
+    SDL_FillRect(screen, NULL, 0x000000);
     if (SDL_PollEvent(&event)){
       switch (event.type){
         case SDL_QUIT:
@@ -183,6 +157,47 @@ int main(int argc, char *argv[])
           break;
       }
     }
+
+    draw_unit(screen, &unit);
+
+    unit.rot--;
+
+#if 0
+    int xdir = 0, ydir = 0;
+
+    /* BOUNCE */
+    if (xdir == 0){
+      if (unit.x + circum_rad(unit.desc.sides) >= screen->w){
+        xdir = 1;
+        unit.x--;
+      } else {
+        unit.x++;
+      }
+    } else {
+      if (unit.x < circum_rad(unit.desc.sides)){
+        xdir = 0;
+        unit.x++;
+      } else {
+        unit.x--;
+      }
+    }
+
+    if (ydir == 0){
+      if (unit.y + circum_rad(unit.desc.sides) >= screen->h){
+        ydir = 1;
+        unit.y--;
+      } else {
+        unit.y++;
+      }
+    } else {
+      if (unit.y < circum_rad(unit.desc.sides)){
+        ydir = 0;
+        unit.y++;
+      } else {
+        unit.y--;
+      }
+    }
+#endif
 
     /* update the screen */
     SDL_UpdateRect(screen, 0, 0, 0, 0);
@@ -192,6 +207,35 @@ int main(int argc, char *argv[])
   SDL_Quit();
 
   return 0;
+}
+
+/*
+ * Draws the given <unit> on the <screen>.
+ */
+static void draw_unit(SDL_Surface *screen, struct unit *unit)
+{
+  Sint16 xs[UNIT_MAX_SIDES];
+  Sint16 ys[UNIT_MAX_SIDES];
+  int i;
+  unsigned cr, ca, xmov, ymov;
+  unsigned rot = unit->rot % 360;
+
+  for (i = 0; i < unit->desc.sides; i++){
+    /* calculate the circum radius */
+    cr = circum_rad(unit->desc.sides);
+    /* calculate the central angle */
+    ca = floor(360 / unit->desc.sides);
+    /* calculate the alpha angle */
+    xmov = cr * sin(RAD(rot));
+    ymov = cr * cos(RAD(rot));
+
+    xs[i] = unit->x - xmov;
+    ys[i] = unit->y + ymov;
+
+    rot += ca;
+  }
+
+  sge_AAFilledPolygon(screen, unit->desc.sides, xs, ys, unit->desc.color);
 }
 
 /*
@@ -212,6 +256,8 @@ static unsigned circum_rad(unsigned sides)
       return a;
     case 7:
       return floor(a * 1.15238);
+    case 9:
+      return floor(a * 1.4619);
     case 10:
       return floor((a * (1 + sqrt(5))) / 2);
     case 12:

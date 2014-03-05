@@ -23,7 +23,7 @@
 /* the minimum number of one unit's sides */
 #define UNIT_MIN_SIDES (3)
 /* the unit's height */
-#define UNIT_HEIGHT (84)
+#define UNIT_HEIGHT (96)
 
 struct unit_desc {
   unsigned sides;
