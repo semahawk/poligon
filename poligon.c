@@ -28,7 +28,7 @@ const static unsigned WINDOW_WIDTH  = 647;
 
 /* static function forwards */
 static void *handle_so(struct unit_desc *desc, char *fname);
-static double side_len(unsigned sides);
+static unsigned side_len(unsigned sides);
 static unsigned circum_rad(unsigned sides);
 static void draw_unit(SDL_Surface *screen, struct unit *unit);
 
@@ -270,7 +270,7 @@ static unsigned circum_rad(unsigned sides)
 /*
  * Given the number of sides, this function calculates length of one side.
  */
-static double side_len(unsigned sides)
+static unsigned side_len(unsigned sides)
 {
   switch (sides){
     case 3:
