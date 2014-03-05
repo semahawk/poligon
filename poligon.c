@@ -26,6 +26,8 @@
 const static unsigned WINDOW_HEIGHT = 400;
 const static unsigned WINDOW_WIDTH  = 647;
 
+static char *progname;
+
 /* static function forwards */
 static void *handle_so(struct unit_desc *desc, char *fname);
 static unsigned side_len(unsigned sides);
@@ -51,7 +53,7 @@ static struct file_handlers file_handlers[] = {
 int main(int argc, char *argv[])
 {
   /* the program's name, d'oh */
-  const char *progname = argv[0];
+  progname = argv[0];
   /* the whole file's name */
   char *fname;
   /* here the file's extension will be stored */
@@ -120,7 +122,6 @@ int main(int argc, char *argv[])
     if (found){
       /* we know the extension, and can handle it */
       if (p->handler(&desc, fname) == NULL){
-        fprintf(stderr, "%s: %s: %s\n", progname, fname, strerror(errno));
         return 1;
       }
     } else {
@@ -159,45 +160,6 @@ int main(int argc, char *argv[])
     }
 
     draw_unit(screen, &unit);
-
-    unit.rot--;
-
-#if 0
-    int xdir = 0, ydir = 0;
-
-    /* BOUNCE */
-    if (xdir == 0){
-      if (unit.x + circum_rad(unit.desc.sides) >= screen->w){
-        xdir = 1;
-        unit.x--;
-      } else {
-        unit.x++;
-      }
-    } else {
-      if (unit.x < circum_rad(unit.desc.sides)){
-        xdir = 0;
-        unit.x++;
-      } else {
-        unit.x--;
-      }
-    }
-
-    if (ydir == 0){
-      if (unit.y + circum_rad(unit.desc.sides) >= screen->h){
-        ydir = 1;
-        unit.y--;
-      } else {
-        unit.y++;
-      }
-    } else {
-      if (unit.y < circum_rad(unit.desc.sides)){
-        ydir = 0;
-        unit.y++;
-      } else {
-        unit.y--;
-      }
-    }
-#endif
 
     /* update the screen */
     SDL_UpdateRect(screen, 0, 0, 0, 0);
@@ -304,6 +266,7 @@ static void *handle_so(struct unit_desc *desc, char *fname)
   struct unit_desc (*init)(void);
 
   if ((lib = dlopen(fname, RTLD_LAZY)) == NULL){
+    fprintf(stderr, "%s: %s: %s\n", progname, fname, strerror(errno));
     return NULL;
   }
 
@@ -317,6 +280,9 @@ static void *handle_so(struct unit_desc *desc, char *fname)
     if (p){
       *desc = ret;
     }
+  } else {
+    fprintf(stderr, "%s: %s: the `init' function was not found", progname, fname);
+    return NULL;
   }
 
   /* TODO: fetch the functions */

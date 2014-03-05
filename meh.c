@@ -12,6 +12,9 @@
 
 #include "poligon.h"
 
+/* make meself global (but not so much) */
+static struct unit *me;
+
 struct unit_desc init(void)
 {
   struct unit_desc desc;
@@ -20,6 +23,11 @@ struct unit_desc init(void)
   desc.color = 0x336699;
 
   return desc;
+}
+
+void fetch(struct unit *unit)
+{
+  me = unit;
 }
 
 /*

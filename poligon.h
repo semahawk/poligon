@@ -42,6 +42,13 @@ struct file_handlers {
   void *(*handler)(struct unit_desc *desc, char *fname);
 };
 
+enum turn_direction {
+  RIGHT, LEFT
+};
+
+/* the poligon.so function prototypes */
+void turn(struct unit *unit, enum turn_direction, unsigned degrees);
+
 #endif /* POLIGON_H */
 
 /*
