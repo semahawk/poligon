@@ -143,17 +143,18 @@ int main(int argc, char *argv[])
   SDL_WM_SetCaption("Poligon", NULL);
   /* create the window */
   SDL_Surface *screen = SDL_SetVideoMode(WINDOW_WIDTH, WINDOW_HEIGHT, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
+  /* fill the background */
+  SDL_FillRect(screen, NULL, 0x111111);
 
   SDL_Event event;
   int running = 1;
-
-  sge_Randomize();
 
   unit.x = screen->w / 2;
   unit.y = screen->h / 2;
 
   while (running){
-    SDL_FillRect(screen, NULL, 0x000000);
+    SDL_FillRect(screen, NULL, 0x111111);
+
     if (SDL_PollEvent(&event)){
       switch (event.type){
         case SDL_QUIT:
@@ -262,10 +263,14 @@ static unsigned circum_rad(unsigned sides)
       return a;
     case 7:
       return floor(a * 1.15238);
+    case 8:
+      return floor(a * 1.4619);
     case 9:
       return floor(a * 1.4619);
     case 10:
       return floor((a * (1 + sqrt(5))) / 2);
+    case 11:
+      return floor(a * 1.77473);
     case 12:
       return floor(((a * sqrt(2)) * (sqrt(3) + 1)) / 2);
     default:

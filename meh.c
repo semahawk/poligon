@@ -19,7 +19,7 @@ struct unit_desc init(void)
 {
   struct unit_desc desc;
 
-  desc.sides = 7;
+  desc.sides = 11;
   desc.color = 0x336699;
 
   return desc;
