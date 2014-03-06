@@ -1,18 +1,19 @@
 CC=clang
+CFLAGS := -Wall `sdl-config --cflags --libs`
 
 .PHONY: poligon meh clean distclean
 all: poligon meh
 
 poligon: poligon.c poligon.h
-	$(CC) -Wall `sdl-config --cflags --libs` -lSGE $< -o $@
+	$(CC) $(CFLAGS) -lSGE $< -o $@
 
 poligon.so: thelib.c poligon.h
-	$(CC) -Wall `sdl-config --cflags` -fPIC -c thelib.c
+	$(CC) $(CFLAGS) -fPIC -c thelib.c
 	$(CC) -shared thelib.o -o $@
 
 meh: meh.so poligon.so
 meh.so: meh.c poligon.h
-	$(CC) -Wall `sdl-config --cflags` -fPIC -lpoligon -c meh.c
+	$(CC) $(CFLAGS) -fPIC -lpoligon -c meh.c
 	$(CC) -shared meh.o -o $@
 
 clean:
@@ -21,3 +22,4 @@ clean:
 
 distclean: clean
 	rm poligon
+

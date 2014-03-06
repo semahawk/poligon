@@ -10,22 +10,28 @@
  *
  */
 
+#include <stdlib.h>
+#include <time.h>
+
 #include "poligon.h"
 
 /* make meself global (but not so much) */
-static struct unit *me;
+static unit_t *me;
 
 struct unit_desc init(void)
 {
   struct unit_desc desc;
 
-  desc.sides = 11;
+  srand(time(NULL));
+
+  strncpy(desc.name, "Meh", UNIT_MAX_NAME_LEN);
+  desc.sides = (rand() % (UNIT_MAX_SIDES - UNIT_MIN_SIDES)) + UNIT_MIN_SIDES + 1;
   desc.color = 0x336699;
 
   return desc;
 }
 
-void fetch(struct unit *unit)
+void fetch(unit_t *unit)
 {
   me = unit;
 }

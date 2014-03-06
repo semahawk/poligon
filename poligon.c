@@ -16,6 +16,7 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <math.h>
+#include <limits.h>
 
 #include <SDL.h>
 #include <sge.h>
@@ -30,10 +31,12 @@ const static unsigned WINDOW_WIDTH  = 647;
 static char *progname;
 
 /* static function forwards */
-static void *handle_so(struct unit_desc *desc, char *fname);
+static void *handle_so(struct unit *unit, struct unit_desc *desc, char *fname);
 static unsigned side_len(unsigned sides);
 static unsigned circum_rad(unsigned sides);
 static void draw_unit(SDL_Surface *screen, struct unit *unit);
+static struct unit get_unit(unit_t unit_id);
+static unit_t calcid(struct unit *unit);
 
 /* some useful macros */
 #define R(c) (((c) & 0xff0000) >> 16)
@@ -62,7 +65,7 @@ int main(int argc, char *argv[])
   /* the user's unit */
   struct unit unit = { 0 };
   /* the unit's description (it's color, etc) */
-  struct unit_desc desc = { 0 };
+  struct unit_desc desc = {{ 0 }};
 
   /* make sure there is at least one argument supplied */
   if (argc < 2){
@@ -74,6 +77,7 @@ int main(int argc, char *argv[])
 
   /* fetch the extension, and store it in `fext' */
   {
+    /* {{{ */
     int i = strlen(fname) - 1; /* minus one to not start at the '\0' */
     /* search for the first dot, starting from the end of the string */
     int j = 0; /* puts the characters into the `fext' array */
@@ -106,10 +110,12 @@ int main(int argc, char *argv[])
     /* here, everything should be all set and ready to roll */
     for (i++ /* skip over the dot */; j < FEXT_MAX_SIZE; j++, i++)
       fext[j] = fname[i];
+    /* }}} */
   }
 
   /* call the function that will handle the file, based on it's extension */
   {
+    /* {{{ */
     struct file_handlers *p = file_handlers;
     int found = 0;
 
@@ -122,7 +128,7 @@ int main(int argc, char *argv[])
 
     if (found){
       /* we know the extension, and can handle it */
-      if (p->handler(&desc, fname) == NULL){
+      if (p->handler(&unit, &desc, fname) == NULL){
         return 1;
       }
     } else {
@@ -130,12 +136,17 @@ int main(int argc, char *argv[])
       fprintf(stderr, "%s: file extension `%s' not supported\n", progname, fext);
       return 1;
     }
+    /* }}} */
   }
 
-  /* set the defaults */
-  unit.hp = 0;
   /* TODO: safety checks for the `desc' values */
   unit.desc = desc;
+  /* set the defaults */
+  unit.hp = UNIT_MAX_HP / 2;
+  /* give the unit an id */
+  unit.id = calcid(&unit);
+
+  /*return 0;*/
 
   /* initialize the SDL */
   SDL_Init(SDL_INIT_EVERYTHING);
@@ -143,16 +154,16 @@ int main(int argc, char *argv[])
   SDL_WM_SetCaption("Poligon", NULL);
   /* create the window */
   SDL_Surface *screen = SDL_SetVideoMode(WINDOW_WIDTH, WINDOW_HEIGHT, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
-  /* fill the background */
-  SDL_FillRect(screen, NULL, 0x111111);
 
   SDL_Event event;
   int running = 1;
 
+  /* put the unit in the middle of the screen */
   unit.x = screen->w / 2;
   unit.y = screen->h / 2;
 
   while (running){
+    /* fill the background */
     SDL_FillRect(screen, NULL, 0x111111);
 
     if (SDL_PollEvent(&event)){
@@ -164,7 +175,7 @@ int main(int argc, char *argv[])
     }
 
     draw_unit(screen, &unit);
-    unit.hp++;
+    unit.hp += sge_Random(-3, 3);
     unit.rot--;
 
     /* update the screen */
@@ -175,6 +186,44 @@ int main(int argc, char *argv[])
   SDL_Quit();
 
   return 0;
+}
+
+/*
+ * Calculate a (more or less) unique id for the given <unit>.
+ * The result depends on the <unit>s name, it's color and it's number of sides.
+ * The calculations were.. blindwritten. There is no logic behind them; I just
+ * wrote it like this, and it seems to work :)
+ */
+static unit_t calcid(struct unit *unit)
+{
+  char *p = unit->desc.name;
+  unit_t ret = 64;
+
+  for (; *p != '\0'; p++){
+    ret += *p * R(unit->desc.color) * G(unit->desc.color) & B(unit->desc.color);
+    ret <<= unit->desc.sides % UNIT_MAX_SIDES;
+    ret += *p ^ B(unit->desc.color) + G(unit->desc.color);
+    ret *= *p * unit->desc.sides + R(unit->desc.color) * G(unit->desc.color);
+  }
+
+  /* TODO: make the modulo more flexible (to depend on `unit_t') */
+  return ret % UINT_MAX;
+}
+
+/*
+ * Return a `struct unit' associated with the given <id>.
+ */
+static struct unit get_unit(unit_t unit_id)
+{
+  /*int i;*/
+
+  /*for (i = 0; i < UNITS_SIZE; i++){*/
+    /*if (units[i].id == unit_id){*/
+      /*return units[i].unit;*/
+    /*}*/
+  /*}*/
+
+  /* return what?; */
 }
 
 /*
@@ -209,20 +258,20 @@ static void draw_unit(SDL_Surface *screen, struct unit *unit)
   unsigned loss = UNIT_HEIGHT - (UNIT_HEIGHT * unit->hp / UNIT_MAX_HP);
 
   /* draw the health bar's background */
-  /* the top left corner */
+  /* top left corner */
   xs[0] = unit->x - (UNIT_HEIGHT / 2) - 2;
   ys[0] = unit->y + (UNIT_HEIGHT / 2) + 14;
-  /* the top right corner */
+  /* top right corner */
   xs[1] = unit->x + (UNIT_HEIGHT / 2) + 2;
   ys[1] = unit->y + (UNIT_HEIGHT / 2) + 14;
-  /* the bottom right corner */
+  /* bottom right corner */
   xs[2] = unit->x + (UNIT_HEIGHT / 2) + 2;
   ys[2] = unit->y + (UNIT_HEIGHT / 2) + 24;
-  /* the bottom left corner */
+  /* bottom left corner */
   xs[3] = unit->x - (UNIT_HEIGHT / 2) - 2;
   ys[3] = unit->y + (UNIT_HEIGHT / 2) + 24;
   /* draw it */
-  sge_AAFilledPolygon(screen, 4, xs, ys, 0x1c1c1c);
+  sge_AAFilledPolygon(screen, 4, xs, ys, 0x222222);
 
   /* draw the health bar */
   if (unit->hp > 0){
@@ -230,20 +279,20 @@ static void draw_unit(SDL_Surface *screen, struct unit *unit)
     if (unit->hp >= UNIT_MAX_HP)
       loss = 0;
 
-    /* the top left corner */
+    /* top left corner */
     xs[0] = unit->x - (UNIT_HEIGHT / 2);
     ys[0] = unit->y + (UNIT_HEIGHT / 2) + 16;
-    /* the top right corner */
+    /* top right corner */
     xs[1] = unit->x + (UNIT_HEIGHT / 2) - loss;
     ys[1] = unit->y + (UNIT_HEIGHT / 2) + 16;
-    /* the bottom right corner */
+    /* bottom right corner */
     xs[2] = unit->x + (UNIT_HEIGHT / 2) - loss;
     ys[2] = unit->y + (UNIT_HEIGHT / 2) + 22;
-    /* the bottom left corner */
+    /* bottom left corner */
     xs[3] = unit->x - (UNIT_HEIGHT / 2);
     ys[3] = unit->y + (UNIT_HEIGHT / 2) + 22;
     /* draw it */
-    sge_AAFilledPolygon(screen, 4, xs, ys, 0xef2929);
+    sge_AAFilledPolygon(screen, 4, xs, ys, 0xde3333);
   }
 }
 
@@ -311,10 +360,9 @@ static unsigned side_len(unsigned sides)
   }
 }
 
-static void *handle_so(struct unit_desc *desc, char *fname)
+static void *handle_so(struct unit *unit, struct unit_desc *desc, char *fname)
 {
   void *lib, *p;
-  struct unit_desc (*init)(void);
 
   if ((lib = dlopen(fname, RTLD_LAZY)) == NULL){
     fprintf(stderr, "%s: %s: %s\n", progname, fname, strerror(errno));
@@ -323,17 +371,29 @@ static void *handle_so(struct unit_desc *desc, char *fname)
 
   dlerror(); /* clear any existing error */
 
-  if ((p = dlsym(lib, "init")) != NULL){
-    struct unit_desc ret;
-    init = (struct unit_desc (*)(void))p;
-    ret = init();
+  {
+    initf_t init;
 
-    if (p){
+    if ((p = dlsym(lib, "init")) != NULL){
+      struct unit_desc ret;
+      init = (initf_t)p;
+      ret = init();
+      unit->fun.init = init;
+      /* save the description */
       *desc = ret;
+    } else {
+      fprintf(stderr, "%s: %s: the `init' function was not found", progname, fname);
+      return NULL;
     }
-  } else {
-    fprintf(stderr, "%s: %s: the `init' function was not found", progname, fname);
-    return NULL;
+  }
+
+  {
+    fetchf_t fetch;
+
+    if ((p = dlsym(lib, "fetch")) != NULL){
+      fetch = (fetchf_t)p;
+      unit->fun.fetch = fetch;
+    }
   }
 
   /* TODO: fetch the functions */
