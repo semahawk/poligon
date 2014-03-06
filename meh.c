@@ -16,7 +16,7 @@
 #include "poligon.h"
 
 /* make meself global (but not so much) */
-static unit_t *me;
+static unit_t me;
 
 struct unit_desc init(void)
 {
@@ -31,7 +31,7 @@ struct unit_desc init(void)
   return desc;
 }
 
-void fetch(unit_t *unit)
+void fetch(unit_t unit)
 {
   me = unit;
 }

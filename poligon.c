@@ -32,11 +32,15 @@ static char *progname;
 
 /* static function forwards */
 static void *handle_so(struct unit *unit, struct unit_desc *desc, char *fname);
+
 static unsigned side_len(unsigned sides);
 static unsigned circum_rad(unsigned sides);
-static void draw_unit(SDL_Surface *screen, struct unit *unit);
-static struct unit get_unit(unit_t unit_id);
 static unit_t calcid(struct unit *unit);
+
+static void draw_unit(SDL_Surface *screen, struct unit *unit);
+static void push_unit(struct unit *unit);
+static struct unit get_unit(unit_t unit_id);
+static void free_unit_list(void);
 
 /* some useful macros */
 #define R(c) (((c) & 0xff0000) >> 16)
@@ -46,6 +50,12 @@ static unit_t calcid(struct unit *unit);
 
 #define RAD(deg) ((deg) * M_PI / 180.0)
 #define DEG(rad) ((rad) * 180.0 / M_PI)
+
+/* a singly linked list of the units */
+struct unit_list {
+  struct unit *unit;
+  struct unit_list *next;
+} *unit_list = NULL;
 
 /* an array of functions to which the control would be given upon seeing one of
  * the listed file extensions */
@@ -145,8 +155,10 @@ int main(int argc, char *argv[])
   unit.hp = UNIT_MAX_HP / 2;
   /* give the unit an id */
   unit.id = calcid(&unit);
-
-  /*return 0;*/
+  /* push the unit onto the `unit_list' */
+  push_unit(&unit);
+  /* call the `fetch' function to give the user his unit's id */
+  unit.fun.fetch(unit.id);
 
   /* initialize the SDL */
   SDL_Init(SDL_INIT_EVERYTHING);
@@ -184,6 +196,8 @@ int main(int argc, char *argv[])
 
   /* clean up after SDL */
   SDL_Quit();
+  /* clean up after ourselves */
+  free_unit_list();
 
   return 0;
 }
@@ -206,8 +220,40 @@ static unit_t calcid(struct unit *unit)
     ret *= *p * unit->desc.sides + R(unit->desc.color) * G(unit->desc.color);
   }
 
-  /* TODO: make the modulo more flexible (to depend on `unit_t') */
+  /* TODO: make the modulo more flexible (to depend on size of `unit_t') */
   return ret % UINT_MAX;
+}
+
+/*
+ * 'Pushes' a given <unit> onto the linked list `units'.
+ */
+static void push_unit(struct unit *unit)
+{
+  struct unit_list *l = malloc(sizeof(struct unit_list));
+
+  if (!l){
+    perror("malloc");
+    exit(1);
+  }
+
+  l->unit = unit;
+  l->next = unit_list;
+  unit_list = l;
+}
+
+/*
+ * Frees the whole `units' linked list.
+ *   NOT including the units; they don't get freed.
+ */
+static void free_unit_list(void)
+{
+  struct unit_list *curr = unit_list,
+                   *next = NULL;
+
+  for (; curr != NULL; curr = next){
+    next = curr->next;
+    free(curr);
+  }
 }
 
 /*
@@ -215,13 +261,13 @@ static unit_t calcid(struct unit *unit)
  */
 static struct unit get_unit(unit_t unit_id)
 {
-  /*int i;*/
+  struct unit_list *p = unit_list;
 
-  /*for (i = 0; i < UNITS_SIZE; i++){*/
-    /*if (units[i].id == unit_id){*/
-      /*return units[i].unit;*/
-    /*}*/
-  /*}*/
+  for (; p != NULL; p = p->next){
+    if (p->unit->id == unit_id){
+      return *p->unit;
+    }
+  }
 
   /* return what?; */
 }
