@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS := -Wall `sdl-config --cflags --libs`
+CFLAGS := -Wall -g `sdl-config --cflags --libs`
 
 .PHONY: poligon meh clean distclean
 all: poligon meh

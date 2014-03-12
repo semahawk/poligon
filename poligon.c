@@ -10,6 +10,7 @@
  *
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,8 @@ const static unsigned WINDOW_WIDTH  = 647;
 static char *progname;
 
 /* static function forwards */
+static void *nmalloc(size_t size);
+
 static void *handle_so(struct unit *unit, struct unit_desc *desc, char *fname);
 
 static unsigned side_len(unsigned sides);
@@ -39,7 +42,7 @@ static unit_t calcid(struct unit *unit);
 
 static void draw_unit(SDL_Surface *screen, struct unit *unit);
 static void push_unit(struct unit *unit);
-static struct unit get_unit(unit_t unit_id);
+static struct unit *get_unit(unit_t unit_id);
 static void free_unit_list(void);
 
 /* some useful macros */
@@ -64,6 +67,21 @@ static struct file_handlers file_handlers[] = {
   { NULL, NULL      }
 };
 
+/* a little wrapper around malloc */
+static void *nmalloc(size_t size)
+{
+  /* {{{ */
+  void *p = malloc(size);
+
+  if (p == NULL){
+    fprintf(stderr, "%s: malloc: failed to allocate %lu bytes\n", progname, size);
+    exit(1);
+  }
+
+  return p;
+  /* }}} */
+}
+
 int main(int argc, char *argv[])
 {
   /* the program's name, d'oh */
@@ -72,10 +90,10 @@ int main(int argc, char *argv[])
   char *fname;
   /* here the file's extension will be stored */
   char fext[FEXT_MAX_SIZE + 1] = { 0 };
-  /* the user's unit */
-  struct unit unit = { 0 };
   /* the unit's description (it's color, etc) */
   struct unit_desc desc = {{ 0 }};
+  /* the user's unit */
+  struct unit *unit = nmalloc(sizeof(struct unit));
 
   /* make sure there is at least one argument supplied */
   if (argc < 2){
@@ -138,7 +156,7 @@ int main(int argc, char *argv[])
 
     if (found){
       /* we know the extension, and can handle it */
-      if (p->handler(&unit, &desc, fname) == NULL){
+      if (p->handler(unit, &desc, fname) == NULL){
         return 1;
       }
     } else {
@@ -150,15 +168,15 @@ int main(int argc, char *argv[])
   }
 
   /* TODO: safety checks for the `desc' values */
-  unit.desc = desc;
+  unit->desc = desc;
   /* set the defaults */
-  unit.hp = UNIT_MAX_HP / 2;
+  unit->hp = UNIT_MAX_HP / 2;
   /* give the unit an id */
-  unit.id = calcid(&unit);
+  unit->id = calcid(unit);
   /* push the unit onto the `unit_list' */
-  push_unit(&unit);
+  push_unit(unit);
   /* call the `fetch' function to give the user his unit's id */
-  unit.fun.fetch(unit.id);
+  unit->fun.fetch(unit->id);
 
   /* initialize the SDL */
   SDL_Init(SDL_INIT_EVERYTHING);
@@ -171,8 +189,8 @@ int main(int argc, char *argv[])
   int running = 1;
 
   /* put the unit in the middle of the screen */
-  unit.x = screen->w / 2;
-  unit.y = screen->h / 2;
+  unit->x = screen->w / 2;
+  unit->y = screen->h / 2;
 
   while (running){
     /* fill the background */
@@ -186,9 +204,9 @@ int main(int argc, char *argv[])
       }
     }
 
-    draw_unit(screen, &unit);
-    unit.hp += sge_Random(-3, 3);
-    unit.rot--;
+    draw_unit(screen, unit);
+    unit->hp += sge_Random(-3, 3);
+    unit->rot--;
 
     /* update the screen */
     SDL_UpdateRect(screen, 0, 0, 0, 0);
@@ -259,17 +277,17 @@ static void free_unit_list(void)
 /*
  * Return a `struct unit' associated with the given <id>.
  */
-static struct unit get_unit(unit_t unit_id)
+static struct unit *get_unit(unit_t unit_id)
 {
   struct unit_list *p = unit_list;
 
   for (; p != NULL; p = p->next){
     if (p->unit->id == unit_id){
-      return *p->unit;
+      return p->unit;
     }
   }
 
-  /* return what?; */
+  return NULL;
 }
 
 /*
@@ -409,6 +427,8 @@ static unsigned side_len(unsigned sides)
 static void *handle_so(struct unit *unit, struct unit_desc *desc, char *fname)
 {
   void *lib, *p;
+
+  assert(unit);
 
   if ((lib = dlopen(fname, RTLD_LAZY)) == NULL){
     fprintf(stderr, "%s: %s: %s\n", progname, fname, strerror(errno));
