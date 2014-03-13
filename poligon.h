@@ -67,7 +67,7 @@ enum turn_direction {
 };
 
 /* the poligon.so function prototypes */
-void turn(struct unit *unit, enum turn_direction, unsigned degrees);
+extern void turn(unit_t unit, enum turn_direction, unsigned degrees);
 
 #endif /* POLIGON_H */
 

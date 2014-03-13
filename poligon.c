@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 
     draw_unit(screen, unit);
     unit->hp += sge_Random(-3, 3);
-    unit->rot--;
+    /*unit->rot--;*/
 
     /* update the screen */
     SDL_UpdateRect(screen, 0, 0, 0, 0);
@@ -465,6 +465,18 @@ static void *handle_so(struct unit *unit, struct unit_desc *desc, char *fname)
   /* TODO: fetch the functions */
 
   return lib;
+}
+
+void turn(unit_t unit, enum turn_direction dir, unsigned degrees)
+{
+  struct unit *u = get_unit(unit);
+
+  assert(u);
+
+  if (dir == LEFT)
+    u->rot -= degrees;
+  else
+    u->rot += degrees;
 }
 
 /*

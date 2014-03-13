@@ -34,6 +34,8 @@ struct unit_desc init(void)
 void fetch(unit_t unit)
 {
   me = unit;
+
+  turn(me, LEFT, 60);
 }
 
 /*
