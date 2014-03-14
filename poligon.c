@@ -430,8 +430,8 @@ static void *handle_so(struct unit *unit, struct unit_desc *desc, char *fname)
 
   assert(unit);
 
-  if ((lib = dlopen(fname, RTLD_LAZY)) == NULL){
-    fprintf(stderr, "%s: %s: %s\n", progname, fname, strerror(errno));
+  if ((lib = dlopen(fname, RTLD_NOW | RTLD_GLOBAL)) == NULL){
+    fprintf(stderr, "%s: %s: %s\n", progname, fname, dlerror());
     return NULL;
   }
 

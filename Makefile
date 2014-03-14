@@ -1,25 +1,33 @@
 CC=clang
-CFLAGS := -Wall -g `sdl-config --cflags --libs`
+CFLAGS := -Wall -g
 
-.PHONY: lib meh clean distclean
+.PHONY: lib meh
 all: lib poligon meh
 
-poligon: poligon.c poligon.h
-	$(CC) $(CFLAGS) -c poligon.c
-	$(CC) $(CFLAGS) -lSGE poligon.o -Wl,-rpath -Wl,. -o $@
+# poligon
+poligon.o: poligon.c
+	clang `sdl-config --cflags` -fPIC -c poligon.c
 
-lib: poligon.a
-poligon.a: poligon.c poligon.h
-	$(CC) $(CFLAGS) -fPIC -c poligon.c
-	ar rcs poligon.a poligon.o
+poligon: poligon.o
+	clang poligon.o -o poligon -Wl,-rpath=. `sdl-config --cflags --libs` -lSGE
 
-meh: lib meh.so
-meh.so: meh.c poligon.h
-	$(CC) $(CFLAGS) -fPIC -c meh.c
-	$(CC) -shared poligon.a meh.o -o $@
+# libpoligon
+lib: libpoligon.so.0
+libpoligon.so.0: poligon.o
+	clang -shared -Wl,-soname,libpoligon.so.0 -o libpoligon.so.0.1 poligon.o
+	ln -fs libpoligon.so.0.1 libpoligon.so.0
+	ln -fs libpoligon.so.0.1 libpoligon.so
+
+# meh
+meh: meh.so
+meh.so: meh.o
+	clang -shared -Wl,-rpath=. -Wl,-soname,meh.so -o libmeh.so.0.1 meh.o -L. -lpoligon
+	ln -fs libmeh.so.0.1 meh.so
+meh.o: meh.c poligon.h
+	clang `sdl-config --cflags` -fPIC -c meh.c
 
 clean:
-	rm -rf *.so
+	rm -rf *.so*
 	rm -rf *.o
 	rm -rf *.a
 
